@@ -100,6 +100,16 @@ This orchestrator will:
 - Build star schema in Gold layer
 - Stop immediately if any layer fails
 
+`analytics.py` and `build_reports.py` are separate, optional steps — most runs
+just need Bronze/Silver/Gold refreshed for Power BI, not a full console
+analytics dump or a rebuild of the report tables. Pass flags to include them:
+
+```bash
+python scripts/run_pipeline.py --with-reports      # ...+ report_customers/report_products
+python scripts/run_pipeline.py --with-analytics    # ...+ console analytics (implies --with-reports)
+python scripts/run_pipeline.py --full              # everything
+```
+
 ### Run Individual Layers
 
 ```bash
@@ -114,6 +124,12 @@ python scripts/gold_model.py
 ```
 
 ### Build Reports
+
+`report_customers`/`report_products` add RFM-style segmentation on top of the
+gold star schema. `analytics.py`'s customer-segment query reads its result
+straight from `report_customers`, so run this first if you want that section
+to work standalone:
+
 ```bash
 python scripts/build_reports.py
 ```
@@ -144,18 +160,75 @@ DB_PASSWORD=your_password
 ## Database Schema
 
 ### Bronze Layer (Raw)
-- Tables: `raw_cust_info`, `raw_prd_info`, `raw_sales_details`, etc.
+- Tables: `raw_cust_info`, `raw_prd_info`, `raw_sales_details`, `raw_cust_az12`, `raw_loc_a101`, `raw_px_cat_g1v2`
 - No transformations, exact copy of source data
 
 ### Silver Layer (Cleaned)
-- Tables: `cust_silver`, `prd_silver`, `sales_silver`, etc.
+- Tables: `clean_cust_info`, `clean_prd_info`, `clean_sales_details`, `clean_cust_az12`, `clean_loc_a101`, `clean_px_cat_g1v2`
 - Data cleaned, null values handled, duplicates removed
 - Data types standardized
 
 ### Gold Layer (Analytics)
-- Fact tables: `fact_sales`
-- Dimension tables: `dim_customers`, `dim_products`, `dim_dates`
+- Fact table: `fact_sales`
+- Dimension tables: `dim_customers`, `dim_products`, `dim_date`
+- Reporting tables (built by `build_reports.py`): `report_customers`, `report_products`
 - Optimized for analytics queries and Power BI
+
+### Gold Star Schema (ER Diagram)
+
+```mermaid
+erDiagram
+    fact_sales }o--|| dim_customers : "sls_cust_id → cst_id"
+    fact_sales }o--|| dim_products : "sls_prd_key → prd_key"
+    fact_sales }o--|| dim_date : "sls_order_dt → date"
+
+    fact_sales {
+        string sls_ord_num
+        string sls_prd_key FK
+        int sls_cust_id FK
+        date sls_order_dt FK
+        date sls_ship_dt
+        date sls_due_dt
+        int sls_quantity
+        float sls_price
+        float sales_amount
+        float profit
+    }
+
+    dim_customers {
+        int cst_id PK
+        string cst_key
+        string cst_firstname
+        string cst_lastname
+        string cst_gndr
+        string cst_marital_status
+        date bdate
+        string cntry
+    }
+
+    dim_products {
+        string prd_key PK
+        string prd_nm
+        float prd_cost
+        string cat_id
+        string cat
+        string subcat
+        date prd_start_dt
+        date prd_end_dt
+    }
+
+    dim_date {
+        date date PK
+        int year
+        int quarter
+        int month
+        string month_name
+        int week
+        int day
+        string weekday
+        boolean is_weekend
+    }
+```
 
 ## Power BI Integration
 
@@ -201,4 +274,4 @@ For issues, questions, or suggestions, please open an issue on GitHub.
 
 ---
 
-**Last Updated**: April 2026
+**Last Updated**: September 2026

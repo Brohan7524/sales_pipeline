@@ -1,27 +1,27 @@
 """
-ANALYTICS LAYER — Converts SQL Server analysis scripts 01-09 to Python/MySQL.
+ANALYTICS LAYER - Converts SQL Server analysis scripts 01-09 to Python/MySQL.
 Runs all exploratory and analytical queries against the gold layer.
 Prints results neatly to console.
 
 Run with: python analytics.py
 """
 
+import os
 import pandas as pd
 from sqlalchemy import create_engine, text
+from dotenv import load_dotenv
 import sys
 
-# ─────────────────────────────────────────────
-# CONFIG
-# ─────────────────────────────────────────────
-DB_USER     = "root"
-DB_PASSWORD = "admin"
-DB_HOST     = "localhost"
-DB_PORT     = "3306"
+# Config - loaded from .env (see .env.example)
+load_dotenv(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", ".env"))
+
+DB_USER     = os.getenv("DB_USER", "root")
+DB_PASSWORD = os.getenv("DB_PASSWORD")
+DB_HOST     = os.getenv("DB_HOST", "localhost")
+DB_PORT     = os.getenv("DB_PORT", "3306")
 GOLD_DB     = "gold"
 
-# ─────────────────────────────────────────────
-# HELPERS
-# ─────────────────────────────────────────────
+# Helpers
 def make_engine():
     try:
         engine = create_engine(
@@ -29,16 +29,16 @@ def make_engine():
         )
         with engine.connect() as c:
             c.execute(text("SELECT 1"))
-        print(f"    ✅ Connected to '{GOLD_DB}'.")
+        print(f"    Connected to '{GOLD_DB}'.")
         return engine
     except Exception as e:
-        print(f"    ❌ Cannot connect: {e}")
+        print(f"    Cannot connect: {e}")
         sys.exit(1)
 
 def run_query(engine, title, sql):
-    print(f"\n{'─'*60}")
-    print(f"  📊 {title}")
-    print(f"{'─'*60}")
+    print(f"\n{'-'*60}")
+    print(f"  {title}")
+    print(f"{'-'*60}")
     try:
         df = pd.read_sql(sql, engine)
         if df.empty:
@@ -47,22 +47,19 @@ def run_query(engine, title, sql):
             print(df.to_string(index=False))
         return df
     except Exception as e:
-        print(f"  ❌ Query failed: {e}")
+        print(f"  Query failed: {e}")
         return None
 
-# ─────────────────────────────────────────────
 print("\n" + "="*60)
-print("  ANALYTICS LAYER — Starting...")
+print("  ANALYTICS LAYER - Starting...")
 print("="*60)
 
 engine = make_engine()
 
-# ═══════════════════════════════════════════════════════════
-# 01 — DATABASE EXPLORATION
-# ═══════════════════════════════════════════════════════════
-print("\n\n" + "█"*60)
-print("  01 — DATABASE EXPLORATION")
-print("█"*60)
+# 01 - DATABASE EXPLORATION
+print("\n\n" + "="*60)
+print("  01 - DATABASE EXPLORATION")
+print("="*60)
 
 run_query(engine, "All tables in gold database","""
     SELECT TABLE_NAME, TABLE_TYPE
@@ -76,12 +73,10 @@ run_query(engine, "Columns in dim_customers", """
     WHERE TABLE_SCHEMA = 'gold' AND TABLE_NAME = 'dim_customers'
 """)
 
-# ═══════════════════════════════════════════════════════════
-# 02 — DATA EXPLORATION
-# ═══════════════════════════════════════════════════════════
-print("\n\n" + "█"*60)
-print("  02 — DATA EXPLORATION")
-print("█"*60)
+# 02 - DATA EXPLORATION
+print("\n\n" + "="*60)
+print("  02 - DATA EXPLORATION")
+print("="*60)
 
 run_query(engine, "Distinct countries of customers", """
     SELECT DISTINCT cntry AS country
@@ -128,12 +123,10 @@ run_query(engine, "Key business metrics summary", """
     SELECT 'Total Customers',                     COUNT(DISTINCT cst_id)       FROM dim_customers
 """)
 
-# ═══════════════════════════════════════════════════════════
-# 03 — MAGNITUDE ANALYSIS
-# ═══════════════════════════════════════════════════════════
-print("\n\n" + "█"*60)
-print("  03 — MAGNITUDE ANALYSIS")
-print("█"*60)
+# 03 - MAGNITUDE ANALYSIS
+print("\n\n" + "="*60)
+print("  03 - MAGNITUDE ANALYSIS")
+print("="*60)
 
 run_query(engine, "Total customers by country", """
     SELECT cntry AS country, COUNT(cst_id) AS total_customers
@@ -192,12 +185,10 @@ run_query(engine, "Total items sold by country", """
     ORDER BY total_sold_items DESC
 """)
 
-# ═══════════════════════════════════════════════════════════
-# 04 — RANKING ANALYSIS
-# ═══════════════════════════════════════════════════════════
-print("\n\n" + "█"*60)
-print("  04 — RANKING ANALYSIS")
-print("█"*60)
+# 04 - RANKING ANALYSIS
+print("\n\n" + "="*60)
+print("  04 - RANKING ANALYSIS")
+print("="*60)
 
 run_query(engine, "Top 5 products by revenue", """
     SELECT
@@ -249,12 +240,10 @@ run_query(engine, "10 customers with fewest orders", """
     LIMIT 10
 """)
 
-# ═══════════════════════════════════════════════════════════
-# 05 — TIME-SERIES ANALYSIS
-# ═══════════════════════════════════════════════════════════
-print("\n\n" + "█"*60)
-print("  05 — TIME-SERIES ANALYSIS")
-print("█"*60)
+# 05 - TIME-SERIES ANALYSIS
+print("\n\n" + "="*60)
+print("  05 - TIME-SERIES ANALYSIS")
+print("="*60)
 
 run_query(engine, "Sales seasonality by month", """
     SELECT
@@ -280,12 +269,10 @@ run_query(engine, "Monthly sales performance over time", """
     ORDER BY DATE_FORMAT(sls_order_dt, '%Y-%m')
 """)
 
-# ═══════════════════════════════════════════════════════════
-# 06 — CUMULATIVE ANALYSIS
-# ═══════════════════════════════════════════════════════════
-print("\n\n" + "█"*60)
-print("  06 — CUMULATIVE ANALYSIS")
-print("█"*60)
+# 06 - CUMULATIVE ANALYSIS
+print("\n\n" + "="*60)
+print("  06 - CUMULATIVE ANALYSIS")
+print("="*60)
 
 run_query(engine, "Running total sales and average price by year", """
     SELECT
@@ -325,12 +312,10 @@ run_query(engine, "Rolling 2-year total and average price", """
     ORDER BY order_year
 """)
 
-# ═══════════════════════════════════════════════════════════
-# 07 — PERFORMANCE ANALYSIS
-# ═══════════════════════════════════════════════════════════
-print("\n\n" + "█"*60)
-print("  07 — PERFORMANCE ANALYSIS")
-print("█"*60)
+# 07 - PERFORMANCE ANALYSIS
+print("\n\n" + "="*60)
+print("  07 - PERFORMANCE ANALYSIS")
+print("="*60)
 
 run_query(engine, "Yearly sales vs average and prior year", """
     SELECT
@@ -407,12 +392,10 @@ run_query(engine, "Product yearly performance vs avg and prior year", """
     ORDER BY product_name, order_year
 """)
 
-# ═══════════════════════════════════════════════════════════
-# 08 — PART-TO-WHOLE ANALYSIS
-# ═══════════════════════════════════════════════════════════
-print("\n\n" + "█"*60)
-print("  08 — PART-TO-WHOLE ANALYSIS")
-print("█"*60)
+# 08 - PART-TO-WHOLE ANALYSIS
+print("\n\n" + "="*60)
+print("  08 - PART-TO-WHOLE ANALYSIS")
+print("="*60)
 
 run_query(engine, "Category contribution to overall sales (%)", """
     SELECT
@@ -432,12 +415,10 @@ run_query(engine, "Category contribution to overall sales (%)", """
     ORDER BY total_sales DESC
 """)
 
-# ═══════════════════════════════════════════════════════════
-# 09 — SEGMENTATION ANALYSIS
-# ═══════════════════════════════════════════════════════════
-print("\n\n" + "█"*60)
-print("  09 — SEGMENTATION ANALYSIS")
-print("█"*60)
+# 09 - SEGMENTATION ANALYSIS
+print("\n\n" + "="*60)
+print("  09 - SEGMENTATION ANALYSIS")
+print("="*60)
 
 run_query(engine, "Products by cost range segment", """
     SELECT
@@ -460,32 +441,17 @@ run_query(engine, "Products by cost range segment", """
     ORDER BY total_products DESC
 """)
 
+# Segmentation itself is defined once in build_reports.py (report_customers.customer_segment) -
+# run build_reports.py before this script so the table below exists.
 run_query(engine, "Customer segments: VIP / Regular / New", """
     SELECT
         customer_segment,
-        COUNT(sls_cust_id) AS total_customers
-    FROM (
-        SELECT
-            sls_cust_id,
-            CASE
-                WHEN lifespan >= 12 AND total_spending > 5000 THEN 'VIP'
-                WHEN lifespan >= 12 AND total_spending <= 5000 THEN 'Regular'
-                ELSE 'New'
-            END AS customer_segment
-        FROM (
-            SELECT
-                sls_cust_id,
-                SUM(sales_amount)                                                          AS total_spending,
-                TIMESTAMPDIFF(MONTH, MIN(sls_order_dt), MAX(sls_order_dt))                AS lifespan
-            FROM fact_sales
-            GROUP BY sls_cust_id
-        ) spending
-    ) segmented
+        COUNT(cst_id) AS total_customers
+    FROM report_customers
     GROUP BY customer_segment
     ORDER BY total_customers DESC
 """)
 
-# ─────────────────────────────────────────────
 print("\n\n" + "="*60)
-print("  ✅ ANALYTICS COMPLETE — All 9 analysis sections run.")
+print("  ANALYTICS COMPLETE - All 9 analysis sections run.")
 print("="*60 + "\n")
