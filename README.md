@@ -44,6 +44,9 @@ sales_pipeline/
 ├── data_architecture.png           # Architecture diagram
 ├── requirements.txt                # Python dependencies
 ├── .env.example                    # Environment variable template
+├── Dockerfile                      # Pipeline container image
+├── docker-compose.yml              # MySQL + pipeline services
+├── .dockerignore                   # Files excluded from the image
 ├── LICENSE                         # MIT License
 └── README.md                       # This file
 ```
@@ -53,6 +56,7 @@ sales_pipeline/
 - Python 3.8+
 - MySQL Server 8.0+
 - Git
+- Docker and Docker Compose (optional, for containerized setup)
 
 ## Installation
 
@@ -132,6 +136,30 @@ to work standalone:
 
 ```bash
 python scripts/build_reports.py
+```
+
+### Run with Docker
+
+No local Python or MySQL install needed — `docker-compose.yml` spins up MySQL
+and runs the pipeline against it:
+
+```bash
+docker compose up --build
+```
+
+This runs Bronze → Silver → Gold → Reports → Analytics (`--full`) against a
+MySQL container that persists data in the `mysql_data` volume. To reuse
+credentials from your `.env` (falls back to the `.env.example` defaults
+otherwise):
+
+```bash
+docker compose --env-file .env up --build
+```
+
+Re-run just the pipeline against the already-running database:
+
+```bash
+docker compose run --rm pipeline python scripts/run_pipeline.py
 ```
 
 ## Data Sources
